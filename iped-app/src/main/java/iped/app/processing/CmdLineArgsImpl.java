@@ -87,7 +87,8 @@ public class CmdLineArgsImpl implements CmdLineArgs {
     @Parameter(names = { "-b", "-blocksize" }, description = "sector block size (bytes), must set to 4k sector devices")
     private int blocksize;
 
-    @Parameter(names = { "-p", "-password" }, description = "password for encrypted images/volumes", splitter = NoSplitter.class)
+    @Parameter(names = { "-p",
+            "-password" }, description = "password for encrypted images/volumes", splitter = NoSplitter.class)
     private List<String> passwords;
 
     @Parameter(names = "-profile", description = "use a processing profile: forensic, pedo, "
@@ -109,6 +110,9 @@ public class CmdLineArgsImpl implements CmdLineArgs {
     @Parameter(names = "--nogui", description = "do not open progress windows, text mode processing")
     private boolean nogui;
 
+    @Parameter(names = "--json-log", description = "output structured JSON logs (NDJSON) to console in nogui mode")
+    private boolean jsonLog;
+
     @Parameter(names = "--nologfile", description = "log messages to standard output")
     private boolean nologfile;
 
@@ -124,9 +128,9 @@ public class CmdLineArgsImpl implements CmdLineArgs {
 
     @Parameter(names = "--downloadInternetData", description = "download Internet data to enrich evidence data processing. E.g. media files still available in WhatsApp servers and not found in the evidence")
     private boolean downloadInternetData;
-    
+
     @Parameter(names = { "-splash" }, description = "custom message to be shown in the splash screen")
-    private String splashMessage;    
+    private String splashMessage;
 
     @Parameter(names = { "--help", "-h", "/?" }, help = true, description = "display this help")
     private boolean help;
@@ -228,6 +232,10 @@ public class CmdLineArgsImpl implements CmdLineArgs {
         return nogui;
     }
 
+    public boolean isJsonLog() {
+        return jsonLog;
+    }
+
     @Override
     public boolean isNologfile() {
         return nologfile;
@@ -252,7 +260,7 @@ public class CmdLineArgsImpl implements CmdLineArgs {
     public String getSplashMessage() {
         return splashMessage;
     }
-    
+
     @Override
     public boolean isHelp() {
         return help;
@@ -325,7 +333,7 @@ public class CmdLineArgsImpl implements CmdLineArgs {
      * Salva os parâmetros no objeto do caso, para serem consultados pelos módulos.
      *
      * @param caseData
-     *            caso atual
+     *                 caso atual
      */
     public void saveIntoCaseData(ICaseData caseData) {
         caseData.putCaseObject(CmdLineArgs.class.getName(), this);
@@ -397,7 +405,7 @@ public class CmdLineArgsImpl implements CmdLineArgs {
      * parâmetro para a classe que o utiliza e remover esta função.
      *
      * @param args
-     *            parâmetros
+     *             parâmetros
      */
     private void handleSpecificArgs() {
 
@@ -407,7 +415,7 @@ public class CmdLineArgsImpl implements CmdLineArgs {
             throw new ParameterException("parameter '-d' or '-r' required."); //$NON-NLS-1$
         }
 
-        if (evidenceToRemove != null) {
+        if (evidenceToRemove != null || jsonLog) {
             this.nogui = true;
         }
 

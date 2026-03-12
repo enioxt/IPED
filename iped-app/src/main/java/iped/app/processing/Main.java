@@ -236,7 +236,7 @@ public class Main {
             provider.addPropertyChangeListener(progressFrame, true);
             frame = progressFrame;
         } else {
-            ProgressConsole console = new ProgressConsole();
+            ProgressConsole console = new ProgressConsole(cmdLineParams.isJsonLog());
             provider.addPropertyChangeListener(console, false);
         }
 

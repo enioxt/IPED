@@ -28,6 +28,15 @@ public class ProgressConsole implements PropertyChangeListener {
     private long lastTime;
     private long processingStart;
     private final NumberFormat sizeFormat = LocalizedFormat.getNumberInstance();
+    private boolean jsonLog;
+
+    public ProgressConsole() {
+        this(false);
+    }
+
+    public ProgressConsole(boolean jsonLog) {
+        this.jsonLog = jsonLog;
+    }
 
     @Override
     public void propertyChange(PropertyChangeEvent evt) {
@@ -81,7 +90,13 @@ public class ProgressConsole implements PropertyChangeListener {
             msg += Messages.getString("ProgressConsole.FinishIn") + secsToEnd / 3600 + "h " + (secsToEnd / 60) % 60
                     + "m " + secsToEnd % 60 + "s";
         }
-        LOGGER.log(MSG, msg);
+        if (jsonLog) {
+            String json = String.format("{\"ts\":\"%tFT%<tT\",\"level\":\"MSG\",\"module\":\"ProgressConsole\",\"message\":\"%s\",\"processedItems\":%d,\"totalItems\":%d,\"rateGBh\":%d}", 
+                System.currentTimeMillis(), msg.replace("\"", "\\\""), processedItems, totalItems, rate);
+            LOGGER.log(MSG, json);
+        } else {
+            LOGGER.log(MSG, msg);
+        }
 
         if (System.currentTimeMillis() - lastTime >= LOG_ITEMS_INTERVAL_MILLIS) {
             if (lastTime != 0) {
@@ -114,7 +129,15 @@ public class ProgressConsole implements PropertyChangeListener {
             } else {
                 msg.append(" [no item]");
             }
-            LOGGER.log(MSG, msg);
+            if (jsonLog) {
+                String workerName = workers[i].getName().replace("\"", "\\\"");
+                String workerMsg = msg.toString().replace("\"", "\\\"");
+                String json = String.format("{\"ts\":\"%tFT%<tT\",\"level\":\"MSG\",\"module\":\"WorkerStatus\",\"worker\":\"%s\",\"message\":\"%s\"}", 
+                    System.currentTimeMillis(), workerName, workerMsg);
+                LOGGER.log(MSG, json);
+            } else {
+                LOGGER.log(MSG, msg.toString());
+            }
         }
     }
 }
