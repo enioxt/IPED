@@ -301,7 +301,7 @@ public class Statistics {
                 sb.setLength(0);
             }
         }
-        
+
         int numDocs;
         try (IndexReader reader = DirectoryReader.open(ConfiguredFSDirectory.open(indexDir))) {
             numDocs = reader.numDocs();
@@ -396,7 +396,8 @@ public class Statistics {
                 enabledTasks = (EnableTaskProperty) config;
                 continue;
             }
-            String configString = config.getConfiguration().toString().replace("\r\n", " ").replace('\r', ' ').replace('\n', ' ');
+            String configString = config.getConfiguration().toString().replace("\r\n", " ").replace('\r', ' ')
+                    .replace('\n', ' ');
             LOGGER.info(config.getClass().getSimpleName() + ": " + configString);
         }
 
@@ -417,6 +418,77 @@ public class Statistics {
             throw new IPEDException(memoryAlert);
         }
 
+    }
+
+    public void writeJsonReport(Manager manager) {
+        try {
+            int numDocs;
+            try (IndexReader reader = DirectoryReader.open(ConfiguredFSDirectory.open(indexDir))) {
+                numDocs = reader.numDocs();
+            }
+            int processed = getProcessed();
+            int extracted = ExportFileTask.getItensExtracted();
+            int carvedIgnored = getCorruptCarveIgnored();
+            int ignored = getIgnored();
+            int indexed = (numDocs - getSplits() - previousIndexedFiles) / 2;
+
+            long totalTime = ((new Date()).getTime() - start.getTime()) / 1000;
+
+            com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
+            com.fasterxml.jackson.databind.node.ObjectNode root = mapper.createObjectNode();
+
+            root.put("version", iped.engine.Version.APP_VERSION);
+
+            CmdLineArgs args = (CmdLineArgs) caseData.getCaseObject(CmdLineArgs.class.getName());
+            root.put("input", args != null && args.getDatasources() != null ? args.getDatasources().toString() : "");
+
+            root.put("totalFiles", caseData.getDiscoveredEvidences());
+            root.put("processedFiles", processed);
+            root.put("indexedFiles", indexed);
+            root.put("activeFiles", getActiveProcessed());
+            root.put("extractedFiles", extracted);
+            root.put("durationSeconds", totalTime);
+            root.put("discoveredVolume", caseData.getDiscoveredVolume());
+            root.put("processedVolume", getVolume());
+
+            com.fasterxml.jackson.databind.node.ObjectNode errors = mapper.createObjectNode();
+            errors.put("ioErrors", getIoErrors());
+            errors.put("timeouts", getTimeouts());
+            errors.put("parsingExceptions", StandardParser.parsingErrors);
+            errors.put("carvedIgnored", carvedIgnored);
+            errors.put("ignored", ignored);
+            root.set("errors", errors);
+
+            Worker[] workers = manager.getWorkers();
+            long[] taskTimes = new long[workers[0].tasks.size()];
+            long rawTotal = 0;
+            for (Worker worker : workers) {
+                for (int i = 0; i < taskTimes.length; i++) {
+                    long t = worker.tasks.get(i).getTaskTime();
+                    taskTimes[i] += t;
+                    rawTotal += t;
+                }
+            }
+            LocalConfig localConfig = ConfigurationManager.get().findObject(LocalConfig.class);
+            long div = 1000000 * localConfig.getNumThreads();
+            rawTotal = rawTotal / div;
+            if (rawTotal < 1)
+                rawTotal = 1;
+
+            com.fasterxml.jackson.databind.node.ObjectNode tasks = mapper.createObjectNode();
+            for (int i = 0; i < taskTimes.length; i++) {
+                long sec = taskTimes[i] / div;
+                tasks.put(workers[0].tasks.get(i).getName(), sec);
+            }
+            root.set("taskTimesSeconds", tasks);
+
+            File reportFile = new File(indexDir.getParentFile(), "processing_report.json");
+            mapper.writerWithDefaultPrettyPrinter().writeValue(reportFile, root);
+            LOGGER.info("Successfully exported machine-readable processing summary: {}", reportFile.getAbsolutePath());
+
+        } catch (Exception e) {
+            LOGGER.error("Failed to write JSON report: ", e);
+        }
     }
 
 }

@@ -321,6 +321,7 @@ public class Manager {
         deleteTempDir();
 
         stats.logStatistics(this);
+        stats.writeJsonReport(this);
 
         status.addSuccessfulEvidences(args);
         status.save();
@@ -512,13 +513,14 @@ public class Manager {
     }
 
     private void openIndex() throws IOException {
-        UIPropertyListenerProvider.getInstance().firePropertyChange("mensagem", "", Messages.getString("Manager.OpeningIndex")); //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
+        UIPropertyListenerProvider.getInstance().firePropertyChange("mensagem", "", //$NON-NLS-1$ //$NON-NLS-2$
+                Messages.getString("Manager.OpeningIndex")); //$NON-NLS-1$
 
         boolean newIndex = !indexDir.exists();
         LOGGER.info((newIndex ? "Creating" : "Opening") + " index: {}", indexDir.getAbsoluteFile());
         Directory directory = ConfiguredFSDirectory.open(indexDir);
         IndexWriterConfig config = getIndexWriterConfig();
-        
+
         if (args.isRestart()) {
             List<IndexCommit> commits = DirectoryReader.listCommits(directory);
             config.setIndexCommit(commits.get(0));
@@ -638,7 +640,8 @@ public class Manager {
             public void run() {
                 try {
                     long start = System.currentTimeMillis() / 1000;
-                    UIPropertyListenerProvider.getInstance().firePropertyChange("mensagem", "", Messages.getString("Manager.CommitStarted"));
+                    UIPropertyListenerProvider.getInstance().firePropertyChange("mensagem", "",
+                            Messages.getString("Manager.CommitStarted"));
                     LOGGER.info("Prepare commit started...");
                     writer.prepareCommit();
 
@@ -659,7 +662,8 @@ public class Manager {
                     writer.commit();
 
                     long end = System.currentTimeMillis() / 1000;
-                    UIPropertyListenerProvider.getInstance().firePropertyChange("mensagem", "", Messages.getString("Manager.CommitFinished"));
+                    UIPropertyListenerProvider.getInstance().firePropertyChange("mensagem", "",
+                            Messages.getString("Manager.CommitFinished"));
                     LOGGER.info("Commit finished in " + (end - start) + "s");
                     partialCommitsTime.addAndGet(end - start);
 
@@ -698,7 +702,8 @@ public class Manager {
         }
 
         if (indexConfig.isForceMerge()) {
-            UIPropertyListenerProvider.getInstance().firePropertyChange("mensagem", "", Messages.getString("Manager.Optimizing")); //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
+            UIPropertyListenerProvider.getInstance().firePropertyChange("mensagem", "", //$NON-NLS-1$ //$NON-NLS-2$
+                    Messages.getString("Manager.Optimizing")); //$NON-NLS-1$
             LOGGER.info("Optimizing Index..."); //$NON-NLS-1$
             try {
                 writer.forceMerge(1);
@@ -710,13 +715,15 @@ public class Manager {
 
         stats.commit();
 
-        UIPropertyListenerProvider.getInstance().firePropertyChange("mensagem", "", Messages.getString("Manager.ClosingIndex")); //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
+        UIPropertyListenerProvider.getInstance().firePropertyChange("mensagem", "", //$NON-NLS-1$ //$NON-NLS-2$
+                Messages.getString("Manager.ClosingIndex")); //$NON-NLS-1$
         LOGGER.info("Closing Index..."); //$NON-NLS-1$
         writer.close();
         writer = null;
 
         if (!indexDir.getCanonicalPath().equalsIgnoreCase(finalIndexDir.getCanonicalPath())) {
-            UIPropertyListenerProvider.getInstance().firePropertyChange("mensagem", "", Messages.getString("Manager.CopyingIndex")); //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
+            UIPropertyListenerProvider.getInstance().firePropertyChange("mensagem", "", //$NON-NLS-1$ //$NON-NLS-2$
+                    Messages.getString("Manager.CopyingIndex")); //$NON-NLS-1$
             LOGGER.info("Moving Index..."); //$NON-NLS-1$
             try {
                 Files.move(indexDir.toPath(), finalIndexDir.toPath());
@@ -861,9 +868,11 @@ public class Manager {
 
         if (!args.isAppendIndex() && !args.isContinue() && !args.isRestart() && args.getEvidenceToRemove() == null) {
             IOUtil.copyDirectory(new File(Configuration.getInstance().appRoot, "lib"), new File(output, "lib"), true); //$NON-NLS-1$ //$NON-NLS-2$
-            IOUtil.copyDirectory(new File(Configuration.getInstance().appRoot, "scripts"), new File(output, "scripts"), true); //$NON-NLS-1$ //$NON-NLS-2$
+            IOUtil.copyDirectory(new File(Configuration.getInstance().appRoot, "scripts"), new File(output, "scripts"), //$NON-NLS-1$ //$NON-NLS-2$
+                    true);
             IOUtil.copyDirectory(new File(Configuration.getInstance().appRoot, "jre"), new File(output, "jre"), true); //$NON-NLS-1$ //$NON-NLS-2$
-            IOUtil.copyDirectory(new File(Configuration.getInstance().appRoot, iped.localization.Messages.BUNDLES_FOLDER),
+            IOUtil.copyDirectory(
+                    new File(Configuration.getInstance().appRoot, iped.localization.Messages.BUNDLES_FOLDER),
                     new File(output, iped.localization.Messages.BUNDLES_FOLDER), true); // $NON-NLS-1$ //$NON-NLS-2$
 
             // Copy tools. For now, skip copying mplayer
@@ -891,8 +900,10 @@ public class Manager {
             // copy default configs
             File defaultProfile = new File(Configuration.getInstance().appRoot);
             IOUtil.copyDirectory(new File(defaultProfile, "conf"), new File(output, "conf"));
-            IOUtil.copyFile(new File(defaultProfile, Configuration.LOCAL_CONFIG), new File(output, Configuration.LOCAL_CONFIG));
-            IOUtil.copyFile(new File(defaultProfile, Configuration.CONFIG_FILE), new File(output, Configuration.CONFIG_FILE));
+            IOUtil.copyFile(new File(defaultProfile, Configuration.LOCAL_CONFIG),
+                    new File(output, Configuration.LOCAL_CONFIG));
+            IOUtil.copyFile(new File(defaultProfile, Configuration.CONFIG_FILE),
+                    new File(output, Configuration.CONFIG_FILE));
             resetLocalConfigToPortable(new File(output, Configuration.LOCAL_CONFIG));
             setSplashMessage(output);
 
@@ -900,7 +911,8 @@ public class Manager {
             File currentProfile = new File(Configuration.getInstance().configPath);
             if (!currentProfile.equals(defaultProfile)) {
                 IOUtil.copyDirectory(currentProfile, new File(output, Configuration.CASE_PROFILE_DIR), true);
-                resetLocalConfigToPortable(new File(output, Configuration.CASE_PROFILE_DIR + "/" + Configuration.LOCAL_CONFIG));
+                resetLocalConfigToPortable(
+                        new File(output, Configuration.CASE_PROFILE_DIR + "/" + Configuration.LOCAL_CONFIG));
             }
             if (caseData.isIpedReport()) {
                 File caseProfile = new File(Configuration.getInstance().appRoot, Configuration.CASE_PROFILE_DIR);
@@ -956,7 +968,7 @@ public class Manager {
     public void setProcessingFinished(boolean isProcessingFinished) {
         this.isProcessingFinished = isProcessingFinished;
     }
-    
+
     private void setSplashMessage(File dir) throws IOException {
         String msg = args.getSplashMessage();
         if (msg != null && !msg.isBlank()) {
